@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/geojson": "^7946.0.10",
     "mapbox-gl": "^2.14.1",
     "vue": "^3.2.47",
     "vue-mapbox-ts": "^0.9.7"
