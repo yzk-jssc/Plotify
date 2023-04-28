@@ -3,3 +3,8 @@ export type PlotsCreateType = {
   type: 'draw.create';
   target: Map;
 };
+
+export type Plot = {
+  featureId: string
+  plotcoordinations: number[][]
+}

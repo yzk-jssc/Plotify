@@ -14,6 +14,8 @@ const token: string = import.meta.env.VITE_MAP_TOKEN;
 const plotsStore = usePlotsStore();
 
 const allPlots = computed(() => {
+    // workaround
+    // do types later
   return plotsStore.plots.map((plot: any) => {
     return plot.geometry.coordinates;
   });
