@@ -1,47 +1,107 @@
+<template>
+  <div class="mapBox" ref="mapContainer"></div>
+</template>
+
 <script setup lang="ts">
-import {
-  MapboxDrawControl,
-  MapboxGeogeometryPolygon,
-  MapboxMap,
-  MapboxMarker,
-} from "vue-mapbox-ts";
-import { PlotsCreateType } from "./types/create";
+import { computed, onMounted, ref } from "vue";
+import mapboxgl from "mapbox-gl";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { usePlotsStore } from "./store/plots";
-import { computed } from "vue";
+import { PlotsCreateType } from "./types/create";
 
 const token: string = import.meta.env.VITE_MAP_TOKEN;
 
 const plotsStore = usePlotsStore();
 
-const allPlots = computed(() => {
-    // workaround
-    // do types later
-  return plotsStore.plots.map((plot: any) => {
-    return plot.geometry.coordinates;
-  });
+const mapContainer = ref<HTMLElement | null>(null);
+const map = ref<mapboxgl.Map | null>(null);
+const draw = ref<MapboxDraw | null>(null);
+
+const getZoomLevel = computed((): number => {
+  if (map.value) {
+    const zoom = map.value.getZoom();
+    return zoom;
+  }
+  return 0;
 });
 
-const createNewPoint = (point: PlotsCreateType) => {
-  console.log(point);
-  plotsStore.createNewPlot(point.features);
+const createNewPoint = (point: GeoJSON.Feature) => {
+  plotsStore.createNewPlot(point, getZoomLevel.value);
 };
 
-const updatePlot = (plot: any) => {
-  // todo: update
-  console.log(plot);
-};
+const allPlots = computed(() => {
+  return plotsStore.plots;
+});
+
+onMounted(async () => {
+  await plotsStore.getAllPlots();
+
+  mapboxgl.accessToken = token;
+  map.value = new mapboxgl.Map({
+    container: mapContainer.value as HTMLElement,
+    style: "mapbox://styles/mapbox/streets-v11",
+    center: [41.63, 41.63],
+    zoom: 12,
+  });
+
+  draw.value = new MapboxDraw({
+    displayControlsDefault: false,
+    controls: {
+      polygon: true,
+    },
+  });
+
+  map.value.addControl(draw.value);
+
+  map.value.on("load", () => {
+    if (allPlots.value.length > 0) {
+      allPlots.value.forEach((plot: GeoJSON.Feature) => {
+        map.value?.addSource(`plot-${plot.id}`, {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [plot],
+          },
+        });
+
+        map.value?.addLayer({
+          id: `plot-${plot.id}`,
+          type: "fill",
+          source: `plot-${plot.id}`,
+          paint: {
+            "fill-color": [
+              "case",
+              ["boolean", ["feature-state", "active"], false],
+              "red",
+              "blue",
+            ],
+            "fill-opacity": 0.5,
+          },
+          layout: {
+            visibility: "visible",
+
+          },
+        });
+
+        // Add click event listener to the layer
+
+        // Set the initial state of the feature to 'active'
+        map.value?.setFeatureState(
+          { source: `plot-${plot.id}`, id: plot.id },
+          { active: true, highlighted: true },
+        );
+      });
+      
+    }
+
+    map.value?.on("draw.create", (event: PlotsCreateType) => {
+      const point: GeoJSON.Feature = event.features[0];
+      createNewPoint(point);
+    });
+  });
+});
 </script>
 
-<template>
-  <div class="mapBox">
-    <MapboxMap :accessToken="token">
-      <MapboxMarker :lngLat="[41.63, 41.63]"> </MapboxMarker>
-
-      <MapboxDrawControl @create="createNewPoint" @update="updatePlot" />
-      <MapboxGeogeometryPolygon v-for="path in allPlots" :path="path" />
-    </MapboxMap>
-  </div>
-</template>
 <style scoped>
 .mapBox {
   height: 700px;
