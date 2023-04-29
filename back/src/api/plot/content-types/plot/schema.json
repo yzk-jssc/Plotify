@@ -4,7 +4,8 @@
   "info": {
     "singularName": "plot",
     "pluralName": "plots",
-    "displayName": "plot"
+    "displayName": "plot",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -16,7 +17,10 @@
       "unique": true,
       "required": true
     },
-    "plotcoordinations": {
+    "zoom": {
+      "type": "integer"
+    },
+    "feature": {
       "type": "json"
     }
   }
